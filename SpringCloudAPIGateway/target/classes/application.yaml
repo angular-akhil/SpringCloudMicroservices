@@ -1,0 +1,5 @@
+eureka:
+  instance:
+    prefer-ip-address: true
+    hostname: localhost
+    ip-address: 127.0.0.1
