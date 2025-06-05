@@ -21,26 +21,28 @@ import org.springframework.web.client.RestTemplate;
 
 import com.appsdeveloperblog.photoapp.api.users.shared.UserDto;
 import com.appsdeveloperblog.photoapp.api.users.ui.model.AlbumResponseModel;
-import com.appsdeveloperblog.photoapp.api.users.ui.model.AlbumsServiceClient;
+import feign.FeignException;
+
 import com.appsdeveloperblog.photoapp.api.users.data.*;
+import com.appsdeveloperblog.photoapp.api.users.messaging.AlbumMessage;
 
 @Service
 public class UsersServiceImpl implements UsersService {
 
 	UsersRepository usersRepository;
 	BCryptPasswordEncoder bCryptPasswordEncoder;
-	RestTemplate restTemplate;
+	// RestTemplate restTemplate;
 	Environment env;
-	//@Autowired
-	//AlbumsServiceClient albumsServiceClient;
+	AlbumsServiceClient albumsServiceClient;
 	Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
 	public UsersServiceImpl(UsersRepository usersRepository, BCryptPasswordEncoder bCryptPasswordEncoder,
-			RestTemplate restTemplate, Environment env) {
+			AlbumsServiceClient albumsServiceClient, Environment env) {
 		this.usersRepository = usersRepository;
 		this.bCryptPasswordEncoder = bCryptPasswordEncoder;
-		this.restTemplate = restTemplate;
+		// this.restTemplate = restTemplate;
+		this.albumsServiceClient = albumsServiceClient;
 		this.env = env;
 	}
 
@@ -92,27 +94,36 @@ public class UsersServiceImpl implements UsersService {
 			throw new UsernameNotFoundException("User Not Found");
 
 		UserDto userDto = new ModelMapper().map(userEntity, UserDto.class);
-		String albumsUrl = String.format(env.getProperty("albums.url"), userId);
-		ResponseEntity<List<AlbumResponseModel>> response = restTemplate.exchange(albumsUrl, HttpMethod.GET, null,
-				new ParameterizedTypeReference<List<AlbumResponseModel>>() {
-				});
-		List<AlbumResponseModel> albumsList = response.getBody();
+		// 1. Http communication between microservices using RestTemplate -->>
+		/*
+		 * String albumsUrl = String.format(env.getProperty("albums.url"), userId);
+		 * ResponseEntity<List<AlbumResponseModel>> response =
+		 * restTemplate.exchange(albumsUrl, HttpMethod.GET, null, new
+		 * ParameterizedTypeReference<List<AlbumResponseModel>>() { });
+		 * List<AlbumResponseModel> albumsList = response.getBody();
+		 */
 
-		/*List<AlbumResponseModel> albumsList = null;
+		// 2. Http communication between microservices using Feign Client -->>
+
+		List<AlbumResponseModel> albumsList = null;
+		logger.info("Before calling albums microservices");
 		try {
 			albumsList = albumsServiceClient.getAlbums(userId);
+
 		} catch (FeignException e) {
 			logger.error(e.getLocalizedMessage());
 		}
 
-		/*
-		 * logger.info("Before calling albums microservices"); List<AlbumResponseModel>
-		 * albumsList = albumsServiceClient.getAlbums(userId);
-		 * logger.info("After calling albums microservices");
-		 */
-
+		logger.info("After calling albums microservices");
 		userDto.setAlbums(albumsList);
 		return userDto;
+	}
+
+	@Override
+	public void updateUserAlbum(AlbumMessage albumMessage) {
+		// TODO Auto-generated method stub
+		System.out.println(albumMessage.getDescription());
+
 	}
 
 }

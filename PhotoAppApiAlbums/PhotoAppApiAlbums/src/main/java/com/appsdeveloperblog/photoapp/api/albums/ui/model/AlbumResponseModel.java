@@ -10,6 +10,7 @@ package com.appsdeveloperblog.photoapp.api.albums.ui.model;
  * @author skargopolov
  */
 public class AlbumResponseModel {
+    private long id;
     private String albumId;
     private String userId; 
     private String name;
@@ -70,5 +71,13 @@ public class AlbumResponseModel {
     public void setDescription(String description) {
         this.description = description;
     }
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
     
 }
