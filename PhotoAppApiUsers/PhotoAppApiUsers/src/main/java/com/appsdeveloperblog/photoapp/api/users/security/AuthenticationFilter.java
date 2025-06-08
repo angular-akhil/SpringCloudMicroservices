@@ -1,6 +1,7 @@
 package com.appsdeveloperblog.photoapp.api.users.security;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -64,12 +65,20 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 		String userName = ((User) auth.getPrincipal()).getUsername();
 		UserDto userDetails = usersService.getUserDetailsByEmail(userName);
 		String tokenSecret = environment.getProperty("token.secret");
-		byte[] secretKeyBytes = Base64.getEncoder().encode(tokenSecret.getBytes());
-        SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
 
-		Instant now = Instant.now();
- 		
+		// 🟨 Paste this right after the above line:
+		System.out.println("USERS-WS token.secret = [" + tokenSecret + "]");
+		System.out.println("USERS-WS token.secret length = " + tokenSecret.length());
+		System.out.println("USERS-WS token.secret byte length = " + tokenSecret.getBytes().length);
+
+		byte[] secretKeyBytes = tokenSecret.getBytes(StandardCharsets.UTF_8);
+        SecretKey secretKey = Keys.hmacShaKeyFor(secretKeyBytes);
+        System.out.println("Users-Ws authenticationfilter " +secretKey.getAlgorithm());
+
+		Instant now = Instant.now();		
+
 		String token = Jwts.builder()
+				.claim("scope", auth.getAuthorities())
                 .subject(userDetails.getUserId())
                 .expiration(Date.from(now.plusMillis(Long.parseLong(environment.getProperty("token.expiration_time")))))
                 .issuedAt(Date.from(now))

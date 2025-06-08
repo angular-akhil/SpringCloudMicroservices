@@ -23,6 +23,8 @@ import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,7 +41,7 @@ public class AlbumsController {
 
 	AlbumsService albumsService;
 	AlbumMessageProducer albumMessageProducer;
-	
+
 	@Autowired
 	public AlbumsController(AlbumsService albumsService, AlbumMessageProducer albumMessageProducer) {
 		super();
@@ -51,6 +53,7 @@ public class AlbumsController {
 
 	@GetMapping(value = "/users/{id}/albums", produces = { MediaType.APPLICATION_JSON_VALUE,
 			MediaType.APPLICATION_XML_VALUE, })
+	@PreAuthorize("principal == #id or hasAuthority('PROFILE.READ') or hasRole('ADMIN')")
 	public List<AlbumResponseModel> userAlbums(@PathVariable String id) {
 
 		List<AlbumResponseModel> returnValue = new ArrayList<>();
@@ -72,18 +75,19 @@ public class AlbumsController {
 	@PostMapping(value = "/createAlbum", consumes = { MediaType.APPLICATION_XML_VALUE,
 			MediaType.APPLICATION_JSON_VALUE }, produces = { MediaType.APPLICATION_XML_VALUE,
 					MediaType.APPLICATION_JSON_VALUE })
-	public ResponseEntity<String> addAlbum(@RequestParam String userID ,@RequestBody CreateAlbumRequestModel createAlbumrequest) {
-		
+	public ResponseEntity<String> addAlbum(@RequestParam String userID,
+			@RequestBody CreateAlbumRequestModel createAlbumrequest) {
+
 		ModelMapper modelMapper = new ModelMapper();
 		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-		
+
 		AlbumEntity albumEntity = new AlbumEntity();
 		albumEntity.setUserId(userID);
 		albumEntity.setId(createAlbumrequest.getId());
 		albumEntity.setAlbumId(createAlbumrequest.getAlbumId());
 		albumEntity.setName(createAlbumrequest.getName());
 		albumEntity.setDescription(createAlbumrequest.getDescription());
-		
+
 		AlbumMessage albumMessage = modelMapper.map(albumEntity, AlbumMessage.class);
 		AlbumResponseModel returnValue = modelMapper.map(albumMessage, AlbumResponseModel.class);
 		if (returnValue != null) {
@@ -92,6 +96,12 @@ public class AlbumsController {
 		} else {
 			return new ResponseEntity<>("Album Not Added", HttpStatus.NOT_FOUND);
 		}
+	}
+
+	@DeleteMapping("/{albumId}")
+	@PreAuthorize("principal == #id or hasRole('ADMIN')")
+	public String deleteAlbum(@PathVariable String id, @PathVariable String albumId) {
+		return "User with id " + id + " is allowed to delete album with id " + albumId;
 	}
 
 }

@@ -1,6 +1,7 @@
 package com.appsdeveloperblog.photoapp.api.users.service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -12,6 +13,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -69,11 +72,21 @@ public class UsersServiceImpl implements UsersService {
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		UserEntity userEntity = usersRepository.findByEmail(username);
 
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		Collection<RoleEntity> roles = userEntity.getRoles();
+		roles.forEach((role) -> {
+			authorities.add(new SimpleGrantedAuthority(role.getName()));
+			Collection<AuthorityEntity> authorityEntities = role.getAuthorities();
+			authorityEntities.forEach((authority) -> {
+				authorities.add(new SimpleGrantedAuthority(authority.getName()));
+			});
+
+		});
+
 		if (userEntity == null)
 			throw new UsernameNotFoundException(username);
 
-		return new User(userEntity.getEmail(), userEntity.getEncryptedPassword(), true, true, true, true,
-				new ArrayList<>());
+		return new User(userEntity.getEmail(), userEntity.getEncryptedPassword(), true, true, true, true, authorities);
 	}
 
 	@Override
@@ -87,7 +100,7 @@ public class UsersServiceImpl implements UsersService {
 	}
 
 	@Override
-	public UserDto getUserByUserId(String userId) {
+	public UserDto getUserByUserId(String userId, String authorization) {
 		// TODO Auto-generated method stub
 		UserEntity userEntity = usersRepository.findByUserId(userId);
 		if (userEntity == null)
@@ -108,7 +121,7 @@ public class UsersServiceImpl implements UsersService {
 		List<AlbumResponseModel> albumsList = null;
 		logger.info("Before calling albums microservices");
 		try {
-			albumsList = albumsServiceClient.getAlbums(userId);
+			albumsList = albumsServiceClient.getAlbums(userId,authorization);
 
 		} catch (FeignException e) {
 			logger.error(e.getLocalizedMessage());
